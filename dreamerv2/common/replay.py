@@ -11,9 +11,10 @@ import tensorflow as tf
 class Replay:
 
   def __init__(
-      self, directory, capacity=0, ongoing=False, minlen=1, maxlen=0,
+      self, directory, datadir, capacity=0, ongoing=False, minlen=1, maxlen=0,
       prioritize_ends=False):
     self._directory = pathlib.Path(directory).expanduser()
+    self._dataset_directory = pathlib.Path(datadir)#.expanduser()
     self._directory.mkdir(parents=True, exist_ok=True)
     self._capacity = capacity
     self._ongoing = ongoing
@@ -22,11 +23,11 @@ class Replay:
     self._prioritize_ends = prioritize_ends
     self._random = np.random.RandomState()
     # filename -> key -> value_sequence
-    self._complete_eps = load_episodes(self._directory, capacity, minlen)
+    self._complete_eps = load_episodes(self._directory, self._dataset_directory, capacity, minlen)
     # worker -> key -> value_sequence
     self._ongoing_eps = collections.defaultdict(
         lambda: collections.defaultdict(list))
-    self._total_episodes, self._total_steps = count_episodes(directory)
+    self._total_episodes, self._total_steps = count_episodes(directory, self._dataset_directory)
     self._loaded_episodes = len(self._complete_eps)
     self._loaded_steps = sum(eplen(x) for x in self._complete_eps.values())
 
@@ -127,10 +128,13 @@ class Replay:
       del self._complete_eps[oldest]
 
 
-def count_episodes(directory):
-  filenames = list(directory.glob('*.npz'))
+def count_episodes(directory, datadir):
+  filenames = list(directory.glob('*.npz')) + list(datadir.glob('*.npz'))
   num_episodes = len(filenames)
-  num_steps = sum(int(str(n).split('-')[-1][:-4]) - 1 for n in filenames)
+  num_steps = 0
+  for file in filenames:
+    episode = np.load(file)
+    num_steps += len(episode['is_first'])
   return num_episodes, num_steps
 
 
@@ -147,10 +151,10 @@ def save_episode(directory, episode):
   return filename
 
 
-def load_episodes(directory, capacity=None, minlen=1):
+def load_episodes(directory, dataset_dir, capacity=None, minlen=1):
   # The returned directory from filenames to episodes is guaranteed to be in
   # temporally sorted order.
-  filenames = sorted(directory.glob('*.npz'))
+  filenames = sorted(directory.glob('*.npz')) + sorted(dataset_dir.glob('*.npz'))
   if capacity:
     num_steps = 0
     num_episodes = 0

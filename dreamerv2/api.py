@@ -44,7 +44,7 @@ def train(env, config, outputs=None):
       common.JSONLOutput(config.logdir),
       common.TensorBoardOutput(config.logdir),
   ]
-  replay = common.Replay(logdir / 'train_episodes', **config.replay)
+  replay = common.Replay(logdir / 'train_episodes', config.datadir, **config.replay)
   step = common.Counter(replay.stats['total_steps'])
   logger = common.Logger(step, outputs, multiplier=config.action_repeat)
   metrics = collections.defaultdict(list)

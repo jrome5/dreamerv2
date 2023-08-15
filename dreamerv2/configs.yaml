@@ -1,6 +1,7 @@
 defaults:
 
   # Train Script
+  datadir: /home/jack/Documents/pyrfuniverse/episodes/gripper_rgb/
   logdir: /dev/null
   seed: 0
   task: dmc_walker_walk
