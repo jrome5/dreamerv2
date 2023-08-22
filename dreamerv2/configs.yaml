@@ -2,6 +2,7 @@ defaults:
 
   # Train Script
   datadir: /home/jack/Documents/pyrfuniverse/episodes/gripper_rgb/
+  class_images_path: /home/rad/.keras/franka_gripper/
   logdir: /dev/null
   seed: 0
   task: dmc_walker_walk

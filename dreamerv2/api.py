@@ -73,7 +73,7 @@ def train(env, config, outputs=None):
     logger.add(replay.stats)
     logger.write()
 
-  env = common.GymWrapper(env)
+  env = common.GymWrapper(env, config.class_images_path)
   env = common.ResizeImage(env)
   if hasattr(env.act_space['action'], 'n'):
     env = common.OneHotAction(env)

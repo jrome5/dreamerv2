@@ -8,15 +8,20 @@ import cloudpickle
 import gym
 import numpy as np
 
+from .classifier import *
+
 
 class GymWrapper:
 
-  def __init__(self, env, obs_key='image', act_key='action'):
+  def __init__(self, env, data_dir, obs_key='image', act_key='action'):
     self._env = env
     self._obs_is_dict = hasattr(self._env.observation_space, 'spaces')
     self._act_is_dict = hasattr(self._env.action_space, 'spaces')
     self._obs_key = obs_key
     self._act_key = act_key
+
+    self._classifier = Classifier(data_dir)
+    self._classifier.train()
 
   def __getattr__(self, name):
     if name.startswith('__'):
@@ -51,9 +56,10 @@ class GymWrapper:
     if not self._act_is_dict:
       action = action[self._act_key]
     obs, reward, done, info = self._env.step(action)
+    image = obs['image']
     if not self._obs_is_dict:
       obs = {self._obs_key: obs}
-    obs['reward'] = float(reward)
+    obs['reward'] = self._classifier.predict(image)#float(reward)
     obs['is_first'] = False
     obs['is_last'] = done
     obs['is_terminal'] = info.get('is_terminal', done)
@@ -637,3 +643,6 @@ class Async:
         conn.close()
       except IOError:
         pass  # The connection was already closed.
+
+  
+  
