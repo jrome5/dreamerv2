@@ -12,7 +12,7 @@ class Replay:
 
   def __init__(
       self, directory, datadir, capacity=0, ongoing=False, minlen=1, maxlen=0,
-      prioritize_ends=False):
+      prioritize_ends=False, max_loaded_data=50000):
     self._directory = pathlib.Path(directory).expanduser()
     self._dataset_directory = pathlib.Path(datadir)#.expanduser()
     self._directory.mkdir(parents=True, exist_ok=True)
@@ -23,11 +23,13 @@ class Replay:
     self._prioritize_ends = prioritize_ends
     self._random = np.random.RandomState()
     # filename -> key -> value_sequence
-    self._complete_eps = load_episodes(self._directory, self._dataset_directory, capacity, minlen)
+    self._complete_eps, demo_eps, demo_steps = load_episodes(self._directory, self._dataset_directory, capacity, minlen, max_loaded_data)
     # worker -> key -> value_sequence
     self._ongoing_eps = collections.defaultdict(
         lambda: collections.defaultdict(list))
-    self._total_episodes, self._total_steps = count_episodes(directory, self._dataset_directory)
+    self._total_episodes, self._total_steps = count_episodes(directory)
+    self._total_episodes += demo_eps
+    self._total_steps += demo_steps
     self._loaded_episodes = len(self._complete_eps)
     self._loaded_steps = sum(eplen(x) for x in self._complete_eps.values())
 
@@ -128,8 +130,8 @@ class Replay:
       del self._complete_eps[oldest]
 
 
-def count_episodes(directory, datadir):
-  filenames = list(directory.glob('*.npz')) + list(datadir.glob('*.npz'))
+def count_episodes(directory):
+  filenames = list(directory.glob('*.npz'))
   num_episodes = len(filenames)
   num_steps = 0
   for file in filenames:
@@ -151,10 +153,25 @@ def save_episode(directory, episode):
   return filename
 
 
-def load_episodes(directory, dataset_dir, capacity=None, minlen=1):
+def load_episodes(directory, dataset_dir, capacity=None, minlen=1, max_demo_timesteps=None):
   # The returned directory from filenames to episodes is guaranteed to be in
   # temporally sorted order.
-  filenames = sorted(directory.glob('*.npz')) + sorted(dataset_dir.glob('*.npz'))
+  filenames = sorted(directory.glob('*.npz'))
+  dataset_eps = 0
+  dataset_steps = 0
+  if(max_demo_timesteps != None):
+    import random
+    demo_filenames = sorted(dataset_dir.glob('*.npz'))
+    while dataset_steps < max_demo_timesteps:
+      file = demo_filenames.pop(random.randrange(len(demo_filenames)))
+      episode = np.load(file)
+      filenames.append(file)
+      dataset_eps += 1
+      dataset_steps += len(episode['action'])
+  elif(max_demo_timesteps == 0):
+    filenames = filenames
+  else:
+    filenames += sorted(dataset_dir.glob('*.npz'))
   if capacity:
     num_steps = 0
     num_episodes = 0
@@ -175,7 +192,7 @@ def load_episodes(directory, dataset_dir, capacity=None, minlen=1):
       print(f'Could not load episode {str(filename)}: {e}')
       continue
     episodes[str(filename)] = episode
-  return episodes
+  return episodes, dataset_eps, dataset_steps
 
 
 def convert(value):
