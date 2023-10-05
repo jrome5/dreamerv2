@@ -21,9 +21,9 @@ class Classifier():
     data_dir = data_path
     data_dir = pathlib.Path(data_dir).with_suffix('')
 
-    self.batch_size = 32
-    self.img_height = 64
-    self.img_width = 64
+    self.batch_size = 16
+    self.img_height = 256
+    self.img_width = 256
 
     self.train_ds = tf.keras.utils.image_dataset_from_directory(
         data_dir,
@@ -97,27 +97,28 @@ class Classifier():
     return
   
   def predict(self,image):
-    img = tf.expand_dims(image, 0) # Create a batch
+    img = image.copy()
+    img = tf.expand_dims(img, 0) # Create a batch
     predictions = self.model.predict(img)
-    score = tf.nn.softmax(predictions[0]).numpy()
-    max_score = np.max(score)
-    return float(np.argmax(score) and max_score > 0.99)
+    for pred in predictions:
+      score = tf.nn.softmax(pred).numpy()
+      max_score = np.max(score)
+      unfold = np.argmax(score) and max_score > 0.9999
+      if unfold:
+        return 1.0
+    return 0.0
 
-if __name__ == "__main__":
-  #train classifier and use it to convert rewards in dataset
-  path = "/home/rad/.keras/franka_gripper/"
+def thread_function(files):
+  path = "/home/rad/.keras/256/"
+  new_path = '/home/rad/Documents/ClothHangProject/episodes/normal_fixed_IK_class'
+
   classifier = Classifier(path)
   classifier.train()
 
-  import numpy as np
-  from os import listdir
-  from os.path import isfile, join
-
-  mypath = '/home/rad/Documents/ClothHangProject/episodes/rgbd_new_2/'
-  new_path = '/home/rad/Documents/ClothHangProject/episodes/new_reward_fixed_2/'
-  onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-  for file in onlyfiles:
-    episode = np.load(join(mypath, file))
+  ep  = 0
+  total = len(files)
+  for file in files:
+    episode = np.load(join(mypath, file), allow_pickle=True)
     observations = episode['observation']
     images = episode['image']
     depths = episode['depth']
@@ -127,11 +128,44 @@ if __name__ == "__main__":
     is_terminals = episode['is_terminal']
     actions = episode['action']
 
-    for i in range(len(episode['image'])):
-      image = episode['image'][i]
+    images256 = episode['largeimgs']
+
+    for i in range(len(images256)):
+      image = images256[i]
       cls_prediction = classifier.predict(image)
+      # image = classifier.resize(image)
       rewards.append(cls_prediction)
     filename = join(new_path, file)
-    np.savez_compressed(filename, observation=observations, image=images, depth=depths, reward=rewards, is_first=is_firsts, is_last=is_lasts, is_terminal=is_lasts,action=actions, )
+    print(f"{ep} / {total}")
+    ep += 1
+    np.savez_compressed(filename, observation=observations, image=images, depth=depths, reward=rewards, is_first=is_firsts, is_last=is_lasts, is_terminal=is_terminals,action=actions, )
 
 
+
+if __name__ == "__main__":
+  #train classifier and use it to convert rewards in dataset
+  import numpy as np
+  from os import listdir
+  from os.path import isfile, join
+
+
+  mypath = '/home/rad/Documents/ClothHangProject/episodes/normal_fixed_IK'
+  onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+
+  import threading
+  import time
+  import logging
+  threads = list()
+  num_threads = 4
+  files_split = np.split(np.array(onlyfiles[:-1]), num_threads) #note: there were 458 here so make 456 for good split
+  for index in range(num_threads):
+      logging.info("Main    : create and start thread %d.", index)
+      x = threading.Thread(target=thread_function, args=(files_split[index],))
+      threads.append(x)
+      time.sleep(0.5)
+      x.start()
+
+  for index, thread in enumerate(threads):
+      logging.info("Main    : before joining thread %d.", index)
+      thread.join()
+      logging.info("Main    : thread %d done", index)

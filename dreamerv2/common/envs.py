@@ -56,13 +56,13 @@ class GymWrapper:
     if not self._act_is_dict:
       action = action[self._act_key]
     obs, reward, done, info = self._env.step(action)
-    image = obs['image']
+    image = self._env.rerender()
     if not self._obs_is_dict:
       obs = {self._obs_key: obs}
-    obs['reward'] = self._classifier.predict(image)#float(reward)
+    obs['reward'] = self._classifier.predict(image)#+float(reward)
     obs['is_first'] = False
     obs['is_last'] = done
-    obs['is_terminal'] = info.get('is_terminal', done)
+    obs['is_terminal'] = done#info.get('is_terminal', done)
     return obs
 
   def reset(self):
