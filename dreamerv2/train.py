@@ -26,6 +26,14 @@ import ruamel.yaml as yaml
 import agent
 import common
 
+from os.path import join, dirname, abspath
+
+mypath = join(dirname(abspath(__file__)), "../../pyrfuniversefull/pyrfuniverse/")
+
+sys.path.append(mypath)
+
+from pyrfuniverse.envs.robotics import FrankaClothHangEnv as ClothEnv
+
 
 def main():
 
@@ -54,9 +62,10 @@ def main():
     from tensorflow.keras.mixed_precision import experimental as prec
     prec.set_policy(prec.Policy('mixed_float16'))
 
-  train_replay = common.Replay(logdir / 'train_episodes', **config.replay)
+  train_replay = common.Replay(logdir / 'train_episodes', config.datadir, **config.replay)
   eval_replay = common.Replay(logdir / 'eval_episodes', **dict(
       capacity=config.replay.capacity // 10,
+      datadir=config.datadir,
       minlen=config.dataset.length,
       maxlen=config.dataset.length))
   step = common.Counter(train_replay.stats['total_steps'])
@@ -91,6 +100,16 @@ def main():
       reward = bool(['noreward', 'reward'].index(task)) or mode == 'eval'
       env = common.Crafter(outdir, reward)
       env = common.OneHotAction(env)
+    elif suite == 'cloth':
+      outdir = logdir if mode == 'train' else None
+      env = ClothEnv(executable_file=config.unitypath, max_steps=config.time_limit)
+      env = common.GymWrapper(env, config.class_images_path)
+      env = common.ResizeImage(env)
+      if hasattr(env.act_space['action'], 'n'):
+        env = common.OneHotAction(env)
+      else:
+        env = common.NormalizeAction(env)
+      env = common.TimeLimit(env, config.time_limit)
     else:
       raise NotImplementedError(suite)
     env = common.TimeLimit(env, config.time_limit)

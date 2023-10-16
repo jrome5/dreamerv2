@@ -1,30 +1,34 @@
 defaults:
 
   # Train Script
-  datadir: /home/jack/Documents/pyrfuniverse/episodes/gripper_rgb/
-  class_images_path: /home/rad/.keras/franka_gripper/
-  logdir: /dev/null
+  # datadir: /home/rad/Documents/ClothHangProject/episodes/rgbd_new_2
+  datadir: /home/rad/Documents/ClothHangProject/episodes/withego #/home/rad/Documents/ClothHangProject/episodes/withego
+  unitypath: "/home/rad/Documents/ClothHangProject/UnityCloth-main/builds/normal_gripper(multi-instance)/clothHang.x86_64"
+  
+  # datadir: /home/rad/Documents/ClothHangProject/episodes/new_reward_fixed
+  class_images_path: /home/rad/.keras/256/
+  logdir: ~/logdir/full/demo40
   seed: 0
-  task: dmc_walker_walk
-  envs: 1
+  task: cloth_1
+  envs: 4
   envs_parallel: none
   render_size: [64, 64]
   dmc_camera: -1
   atari_grayscale: True
-  time_limit: 0
-  action_repeat: 1
+  time_limit: 500
+  action_repeat: 0 #1
   steps: 1e8
   log_every: 1e4
   eval_every: 1e5
   eval_eps: 1
-  prefill: 10000
-  pretrain: 1
+  prefill: 25000
+  pretrain: 500
   train_every: 5
   train_steps: 1
   expl_until: 0
   replay: {capacity: 2e6, ongoing: False, minlen: 50, maxlen: 50, prioritize_ends: True}
   dataset: {batch: 16, length: 50}
-  log_keys_video: ['image']
+  log_keys_video: ['ego','image']
   log_keys_sum: '^$'
   log_keys_mean: '^$'
   log_keys_max: '^$'

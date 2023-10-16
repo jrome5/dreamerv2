@@ -20,8 +20,8 @@ class GymWrapper:
     self._obs_key = obs_key
     self._act_key = act_key
 
-    self._classifier = Classifier(data_dir)
-    self._classifier.train()
+    # self._classifier = Classifier(data_dir)
+    # self._classifier.train()
 
   def __getattr__(self, name):
     if name.startswith('__'):
@@ -56,10 +56,11 @@ class GymWrapper:
     if not self._act_is_dict:
       action = action[self._act_key]
     obs, reward, done, info = self._env.step(action)
+    # depth = self._env.get_depth()
     image = self._env.rerender()
     if not self._obs_is_dict:
       obs = {self._obs_key: obs}
-    obs['reward'] = self._classifier.predict(image)#+float(reward)
+    obs['reward'] = reward #self._classifier.predict(image)#+float(reward)
     obs['is_first'] = False
     obs['is_last'] = done
     obs['is_terminal'] = done#info.get('is_terminal', done)

@@ -118,7 +118,8 @@ class WorldModel(common.Module):
       out = head(inp)
       dists = out if isinstance(out, dict) else {name: out}
       for key, dist in dists.items():
-        like = tf.cast(dist.log_prob(data[key]), tf.float32)
+        x = dist.log_prob(data[key])
+        like = tf.cast(x, tf.float32)
         likes[key] = like
         losses[key] = -like.mean()
     model_loss = sum(
@@ -179,7 +180,7 @@ class WorldModel(common.Module):
         'identity': tf.identity,
         'sign': tf.sign,
         'tanh': tf.tanh,
-    }[self.config.clip_rewards](obs['reward'])
+    }[self.config.clip_rewards](obs['reward']).astype(tf.float32)
     obs['discount'] = 1.0 - obs['is_terminal'].astype(dtype)
     obs['discount'] *= self.config.discount
     return obs
