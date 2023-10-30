@@ -1,17 +1,17 @@
 version: "3"
 services: 
-  pydreamer:
-    image: dreamer:latest
+  dreamer:
+    image: dreamer-deploy:latest
     build: 
-      context: ../
-      dockerfile: $PWD/Dockerfile
+      context: ../../
+      dockerfile: $PWD/Dockerfile.deploy
     environment:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=${XAUTH}
     volumes:
       - /tmp/.X11-unix/:/tmp/.X11-unix:rw
       - ${XAUTH}:${XAUTH}
-      - "$PWD/../:/app/:rw" 
+      - "$PWD/../:/root/dreamer_ws/src/:rw" 
     network_mode: "host"
     privileged: true
     cap_add:

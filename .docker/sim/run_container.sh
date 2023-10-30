@@ -36,7 +36,7 @@ docker run \
     --gpus="all" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --volume="$PWD/../:/app/:rw" \
+    --volume="$PWD/../:/app/ros2_ws/src/:rw" \
     --volume="/home/jack/.keras/:/app/.keras/:rw" \
     --volume="/dev:/dev:rw" \
     --name="dreamer" \

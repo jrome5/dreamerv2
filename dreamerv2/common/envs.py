@@ -63,7 +63,7 @@ class GymWrapper:
     obs['reward'] = reward #self._classifier.predict(image)#+float(reward)
     obs['is_first'] = False
     obs['is_last'] = done
-    obs['is_terminal'] = done#info.get('is_terminal', done)
+    obs['is_terminal'] = info.get('is_success', done)
     return obs
 
   def reset(self):
