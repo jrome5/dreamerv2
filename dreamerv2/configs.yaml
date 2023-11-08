@@ -2,31 +2,31 @@ defaults:
 
   # Train Script
   # datadir: /home/rad/Documents/ClothHangProject/episodes/rgbd_new_2
-  datadir: /home/rad/Documents/ClothHangProject/episodes/withego #/home/rad/Documents/ClothHangProject/episodes/withego
-  unitypath: "/home/rad/Documents/ClothHangProject/UnityCloth-main/builds/normal_gripper(multi-instance)/clothHang.x86_64"
+  datadir: /home/rad/Documents/ClothHangProject/episodes/robotiq_4 #/home/rad/Documents/ClothHangProject/episodes/withego
+  unitypath: "/home/rad/Documents/ClothHangProject/UnityCloth-main/builds/newgripper/clothHang.x86_64"
   
   # datadir: /home/rad/Documents/ClothHangProject/episodes/new_reward_fixed
   class_images_path: /home/rad/.keras/256/
-  logdir: ~/logdir/full/demo40
+  logdir: ~/logdir/full/workingeval_robotiq
   seed: 0
   task: cloth_1
-  envs: 4
+  envs: 5
   envs_parallel: none
   render_size: [64, 64]
   dmc_camera: -1
   atari_grayscale: True
   time_limit: 500
-  action_repeat: 0 #1
+  action_repeat: 1
   steps: 1e8
   log_every: 1e4
   eval_every: 1e5
   eval_eps: 1
   prefill: 25000
-  pretrain: 500
+  pretrain: 1
   train_every: 5
   train_steps: 1
   expl_until: 0
-  replay: {capacity: 2e6, ongoing: False, minlen: 50, maxlen: 50, prioritize_ends: True}
+  replay: {capacity: 1e6, ongoing: False, minlen: 50, maxlen: 50, prioritize_ends: False}
   dataset: {batch: 16, length: 50}
   log_keys_video: ['ego','image']
   log_keys_sum: '^$'
@@ -36,7 +36,7 @@ defaults:
   jit: True
 
   # Agent
-  clip_rewards: tanh
+  clip_rewards: identity #tanh
   expl_behavior: greedy
   expl_noise: 0.0
   eval_noise: 0.0
@@ -51,25 +51,38 @@ defaults:
   reward_head: {layers: 4, units: 400, act: elu, norm: none, dist: mse}
   discount_head: {layers: 4, units: 400, act: elu, norm: none, dist: binary}
   loss_scales: {kl: 1.0, reward: 1.0, discount: 1.0, proprio: 1.0}
-  kl: {free: 0.0, forward: False, balance: 0.8, free_avg: True}
-  model_opt: {opt: adam, lr: 1e-4, eps: 1e-5, clip: 100, wd: 1e-6}
+  kl: {free: 1.0, forward: False, balance: 0.8, free_avg: True} # {free: 0.0, forward: False, balance: 0.8, free_avg: True}
+  model_opt: {opt: adam, lr: 3e-4, eps: 1e-5, clip: 100, wd: 1e-6} # {opt: adam, lr: 1e-4, eps: 1e-5, clip: 100, wd: 1e-6}
 
   # Actor Critic
   actor: {layers: 4, units: 400, act: elu, norm: none, dist: auto, min_std: 0.1}
   critic: {layers: 4, units: 400, act: elu, norm: none, dist: mse}
   actor_opt: {opt: adam, lr: 8e-5, eps: 1e-5, clip: 100, wd: 1e-6}
-  critic_opt: {opt: adam, lr: 2e-4, eps: 1e-5, clip: 100, wd: 1e-6}
+  critic_opt: {opt: adam, lr: 8e-5, eps: 1e-5, clip: 100, wd: 1e-6} #{opt: adam, lr: 2e-4, eps: 1e-5, clip: 100, wd: 1e-6}
   discount: 0.99
   discount_lambda: 0.95
   imag_horizon: 15
   actor_grad: auto
   actor_grad_mix: 0.1
-  actor_ent: 2e-3
+  actor_ent: 1e-4 #2e-3
   slow_target: True
   slow_target_update: 100
   slow_target_fraction: 1
   slow_baseline: True
   reward_norm: {momentum: 1.0, scale: 1.0, eps: 1e-8}
+  
+
+  #  clip_rewards: identity
+  # pred_discount: False
+  # replay.prioritize_ends: False
+  # grad_heads: [decoder, reward]
+  # rssm: {hidden: 200, deter: 200}
+  # model_opt.lr: 3e-4
+  # actor_opt.lr: 8e-5
+  # critic_opt.lr: 8e-5
+  # actor_ent: 1e-4
+  # kl.free: 1.0
+
 
   # Exploration
   expl_intr_scale: 1.0
@@ -83,7 +96,7 @@ defaults:
   disag_offset: 1
   disag_action_cond: True
   expl_model_loss: kl
-
+ 
 atari:
 
   task: atari_pong

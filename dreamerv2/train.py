@@ -28,62 +28,14 @@ import common
 
 from os.path import join, dirname, abspath
 
-mypath = join(dirname(abspath(__file__)), "../../pyrfuniversefull/pyrfuniverse/")
+mypath = join(dirname(abspath(__file__)), "../../pyrfuniverse/")
+# mypath = join(dirname(abspath(__file__)), "../../pyrfuniverse/")
 
 sys.path.append(mypath)
 
 from pyrfuniverse.envs.robotics import FrankaClothHangEnv as ClothEnv
 
-
-def main():
-
-  configs = yaml.safe_load((
-      pathlib.Path(sys.argv[0]).parent / 'configs.yaml').read_text())
-  parsed, remaining = common.Flags(configs=['defaults']).parse(known_only=True)
-  config = common.Config(configs['defaults'])
-  for name in parsed.configs:
-    config = config.update(configs[name])
-  config = common.Flags(config).parse(remaining)
-
-  logdir = pathlib.Path(config.logdir).expanduser()
-  logdir.mkdir(parents=True, exist_ok=True)
-  config.save(logdir / 'config.yaml')
-  print(config, '\n')
-  print('Logdir', logdir)
-
-  import tensorflow as tf
-  tf.config.experimental_run_functions_eagerly(not config.jit)
-  message = 'No GPU found. To actually train on CPU remove this assert.'
-  assert tf.config.experimental.list_physical_devices('GPU'), message
-  for gpu in tf.config.experimental.list_physical_devices('GPU'):
-    tf.config.experimental.set_memory_growth(gpu, True)
-  assert config.precision in (16, 32), config.precision
-  if config.precision == 16:
-    from tensorflow.keras.mixed_precision import experimental as prec
-    prec.set_policy(prec.Policy('mixed_float16'))
-
-  train_replay = common.Replay(logdir / 'train_episodes', config.datadir, **config.replay)
-  eval_replay = common.Replay(logdir / 'eval_episodes', **dict(
-      capacity=config.replay.capacity // 10,
-      datadir=config.datadir,
-      minlen=config.dataset.length,
-      maxlen=config.dataset.length))
-  step = common.Counter(train_replay.stats['total_steps'])
-  outputs = [
-      common.TerminalOutput(),
-      common.JSONLOutput(logdir),
-      common.TensorBoardOutput(logdir),
-  ]
-  logger = common.Logger(step, outputs, multiplier=config.action_repeat)
-  metrics = collections.defaultdict(list)
-
-  should_train = common.Every(config.train_every)
-  should_log = common.Every(config.log_every)
-  should_video_train = common.Every(config.eval_every)
-  should_video_eval = common.Every(config.eval_every)
-  should_expl = common.Until(config.expl_until // config.action_repeat)
-
-  def make_env(mode):
+def make_env(mode, config, logdir):
     suite, task = config.task.split('_', 1)
     if suite == 'dmc':
       env = common.DMC(
@@ -115,6 +67,55 @@ def main():
     env = common.TimeLimit(env, config.time_limit)
     return env
 
+def main():
+
+  configs = yaml.safe_load((
+      pathlib.Path(sys.argv[0]).parent / 'configs.yaml').read_text())
+  parsed, remaining = common.Flags(configs=['defaults']).parse(known_only=True)
+  config = common.Config(configs['defaults'])
+  for name in parsed.configs:
+    config = config.update(configs[name])
+  config = common.Flags(config).parse(remaining)
+
+  logdir = pathlib.Path(config.logdir).expanduser()
+  logdir.mkdir(parents=True, exist_ok=True)
+  config.save(logdir / 'config.yaml')
+  print(config, '\n')
+  print('Logdir', logdir)
+
+  import tensorflow as tf
+  tf.config.experimental_run_functions_eagerly(not config.jit)
+  message = 'No GPU found. To actually train on CPU remove this assert.'
+  assert tf.config.experimental.list_physical_devices('GPU'), message
+  for gpu in tf.config.experimental.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(gpu, True)
+  assert config.precision in (16, 32), config.precision
+  if config.precision == 16:
+    from tensorflow.keras.mixed_precision import experimental as prec
+    prec.set_policy(prec.Policy('mixed_float16'))
+
+  # train_replay = common.Replay(logdir / 'train_episodes', **config.replay)
+  train_replay = common.Replay(logdir / 'train_episodes', config.datadir, **config.replay)
+  eval_replay = common.Replay(logdir / 'eval_episodes', **dict(
+      capacity=config.replay.capacity // 10,
+      datadir=config.datadir,
+      minlen=config.dataset.length,
+      maxlen=config.dataset.length))
+  step = common.Counter(train_replay.stats['total_steps'])
+  outputs = [
+      common.TerminalOutput(),
+      common.JSONLOutput(logdir),
+      common.TensorBoardOutput(logdir),
+  ]
+  logger = common.Logger(step, outputs, multiplier=config.action_repeat)
+  metrics = collections.defaultdict(list)
+
+  should_train = common.Every(config.train_every)
+  should_log = common.Every(config.log_every)
+  should_video_train = common.Every(config.eval_every)
+  should_video_eval = common.Every(config.eval_every)
+  should_expl = common.Until(config.expl_until // config.action_repeat)
+
   def per_episode(ep, mode):
     length = len(ep['reward']) - 1
     score = float(ep['reward'].astype(np.float64).sum())
@@ -139,13 +140,13 @@ def main():
   print('Create envs.')
   num_eval_envs = min(config.envs, config.eval_eps)
   if config.envs_parallel == 'none':
-    train_envs = [make_env('train') for _ in range(config.envs)]
-    eval_envs = [make_env('eval') for _ in range(num_eval_envs)]
-  else:
-    make_async_env = lambda mode: common.Async(
-        functools.partial(make_env, mode), config.envs_parallel)
-    train_envs = [make_async_env('train') for _ in range(config.envs)]
-    eval_envs = [make_async_env('eval') for _ in range(eval_envs)]
+    train_envs = [make_env('train', config, logdir) for _ in range(config.envs)]
+    eval_envs = [make_env('eval', config, logdir) for _ in range(num_eval_envs)]
+  # else:
+  #   make_async_env = lambda mode: common.Async(
+  #       functools.partial(make_env, mode), config.envs_parallel)
+  #   train_envs = [make_async_env('train') for _ in range(config.envs)]
+  #   eval_envs = [make_async_env('eval') for _ in range(eval_envs)]
   act_space = train_envs[0].act_space
   obs_space = train_envs[0].obs_space
   train_driver = common.Driver(train_envs)
@@ -175,6 +176,7 @@ def main():
   train_agent(next(train_dataset))
   if (logdir / 'variables.pkl').exists():
     agnt.load(logdir / 'variables.pkl')
+    agnt.wm.load(logdir / 'wm_variables.pkl')
   else:
     print('Pretrain agent.')
     for _ in range(config.pretrain):
@@ -204,6 +206,7 @@ def main():
     print('Start training.')
     train_driver(train_policy, steps=config.eval_every)
     agnt.save(logdir / 'variables.pkl')
+    agnt.wm.save(logdir / 'wm_variables.pkl')
   for env in train_envs + eval_envs:
     try:
       env.close()

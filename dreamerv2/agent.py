@@ -118,6 +118,9 @@ class WorldModel(common.Module):
       out = head(inp)
       dists = out if isinstance(out, dict) else {name: out}
       for key, dist in dists.items():
+        # if type(dist) != type(data[key]):
+          # print(f"dist {dist} data {data[key]}")
+          # dist = tf.cast(dist, tf.float16)
         x = dist.log_prob(data[key])
         like = tf.cast(x, tf.float32)
         likes[key] = like
@@ -167,6 +170,7 @@ class WorldModel(common.Module):
   @tf.function
   def preprocess(self, obs):
     dtype = prec.global_policy().compute_dtype
+    # print(f"dtype {dtype}")
     obs = obs.copy()
     for key, value in obs.items():
       if key.startswith('log_'):

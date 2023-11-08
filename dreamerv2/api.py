@@ -53,9 +53,12 @@ def train(env, config, outputs=None):
   should_log = common.Every(config.log_every)
   should_video = common.Every(config.log_every)
   should_expl = common.Until(config.expl_until)
+  # classifier = common.Classifier(config.class_images_path)
+  # classifier.train()
 
   def per_episode(ep):
     length = len(ep['reward']) - 1
+    # score = float(classifier.predict(ep['image'][-1])) #causes issues here
     score = float(ep['reward'].astype(np.float64).sum())
     print(f'Episode has {length} steps and return {score:.1f}.')
     logger.scalar('return', score)
@@ -73,6 +76,7 @@ def train(env, config, outputs=None):
     logger.add(replay.stats)
     logger.write()
 
+  # env = common.ClassifierWrapper(env, config.class_images_path)
   env = common.GymWrapper(env, config.class_images_path)
   env = common.ResizeImage(env)
   if hasattr(env.act_space['action'], 'n'):
