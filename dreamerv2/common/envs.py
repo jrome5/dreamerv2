@@ -8,7 +8,7 @@ import cloudpickle
 import gym
 import numpy as np
 
-from .classifier import *
+# from .classifier import *
 
 
 class GymWrapper:

@@ -4,7 +4,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers as tfkl
 from tensorflow_probability import distributions as tfd
-from tensorflow.keras.mixed_precision import experimental as prec
+# from tensorflow.keras.mixed_precision import experimental as prec
+from tensorflow.python.keras.mixed_precision.policy import set_global_policy
+from tensorflow.keras import mixed_precision as prec
 
 import common
 

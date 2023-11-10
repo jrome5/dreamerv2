@@ -21,7 +21,8 @@ sys.path.append(str(pathlib.Path(__file__).parent))
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 import numpy as np
-import ruamel.yaml as yaml
+# import ruamel.yaml as yaml
+from ruamel.yaml import YAML
 
 import agent
 import common
@@ -39,8 +40,8 @@ from train import make_env
 
 
 def main():
-
-  configs = yaml.safe_load((
+  yaml = YAML(typ='safe', pure=True)
+  configs = yaml.load((
       pathlib.Path(sys.argv[0]).parent / 'configs.yaml').read_text())
   parsed, remaining = common.Flags(configs=['defaults']).parse(known_only=True)
   config = common.Config(configs['defaults'])
@@ -62,14 +63,16 @@ def main():
     tf.config.experimental.set_memory_growth(gpu, True)
   assert config.precision in (16, 32), config.precision
   if config.precision == 16:
-    from tensorflow.keras.mixed_precision import experimental as prec
-    prec.set_policy(prec.Policy('mixed_float16'))
+    # from tensorflow.keras.mixed_precision import experimental as prec
+    from tensorflow.python.keras.mixed_precision.policy import set_global_policy
+    set_global_policy('mixed_float16')
 
   eval_replay = common.Replay(logdir / 'eval_episodes', **dict(
       capacity=config.replay.capacity // 10,
       datadir=config.datadir,
       minlen=config.dataset.length,
-      maxlen=config.dataset.length))
+      maxlen=config.dataset.length,
+      max_loaded_data=0))
   step = common.Counter(eval_replay.stats['total_steps'])
 
   outputs = [
