@@ -8,10 +8,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=${XAUTH}
-    volumes:
-      - /tmp/.X11-unix/:/tmp/.X11-unix:rw
-      - ${XAUTH}:${XAUTH}
-      - "$PWD/../:/root/dreamer_ws/src/:rw" 
+      - NVIDIA_VISIBLE_DEVICES=all
     network_mode: "host"
     privileged: true
     cap_add:
@@ -22,3 +19,5 @@ services:
       memlock: 8428281856
     stdin_open: true
     tty: true
+    runtime: nvidia
+    command: tail -f
