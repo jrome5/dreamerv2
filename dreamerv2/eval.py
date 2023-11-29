@@ -66,10 +66,11 @@ def main():
     prec.set_policy(prec.Policy('mixed_float16'))
 
   eval_replay = common.Replay(logdir / 'eval_episodes', **dict(
-      capacity=config.replay.capacity // 10,
+      capacity=1,
       datadir=config.datadir,
       minlen=config.dataset.length,
-      maxlen=config.dataset.length))
+      maxlen=config.dataset.length,
+      max_loaded_data=0)) #load a small dataset for initializing models
   step = common.Counter(eval_replay.stats['total_steps'])
 
   outputs = [
